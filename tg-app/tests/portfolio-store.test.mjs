@@ -33,6 +33,21 @@ test('автономная запись сохраняется после пов
   );
 });
 
+test('календарь автономного режима показывает свободные окна и скрывает занятую запись',async()=>{
+  const storage=memoryStorage();
+  const now=()=>Date.parse('2026-09-10T00:00:00Z');
+  let id=100;
+  const api=createPortfolioApi({storage,now,randomUUID:()=>`30000000-0000-4000-8000-${String(++id).padStart(12,'0')}`});
+  const before=(await api.request('slots?serviceId=nude&date=2026-09-11')).slots;
+  assert.ok(before.length>2);
+  const start=before[0].start;
+  await api.request('bookings',{method:'POST',body:JSON.stringify({key:'calendar-key-001',serviceId:'nude',start,name:'Ирина'})});
+  const after=(await api.request('slots?serviceId=nude&date=2026-09-11')).slots;
+  assert.equal(after.some(slot=>slot.start===start),false);
+  const month=(await api.request('month?serviceId=nude&month=2026-09')).days;
+  assert.ok(month['2026-09-11']>0);
+});
+
 test('персональная ссылка подтверждает запись один раз и автоматически отправляет демо-напоминание',async()=>{
   const storage=memoryStorage();
   let clock=Date.parse('2026-09-10T00:00:00Z'),id=10;

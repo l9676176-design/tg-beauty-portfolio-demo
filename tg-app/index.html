@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Точка входа Mini App. Сервер и демонстрация используют один интерфейс. -->
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F4F6F8">
+  <title>Ольга — студия маникюра</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://telegram.org/js/telegram-web-app.js" defer></script>
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header id="header" class="app-header"></header>
+    <div id="demo-banner" class="demo-banner" hidden>Демо · запись только для знакомства</div>
+    <main id="screen" tabindex="-1" aria-label="Содержимое приложения"><div class="skeleton"></div><p class="loading">Открываем студию…</p></main>
+    <div id="action-bar" class="action-bar" hidden></div>
+    <nav id="tabs" class="tab-bar" aria-label="Основные разделы"></nav>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <noscript>Для просмотра каталога включите JavaScript в браузере.</noscript>
+</body>
+</html>

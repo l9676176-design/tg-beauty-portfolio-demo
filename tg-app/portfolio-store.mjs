@@ -50,17 +50,49 @@ export function createPortfolioApi(options={}){
   const requireKey=data=>{
     if(typeof data.key!=='string'||data.key.length<16)fail(400,'Не удалось определить запрос. Откройте запись заново.');
   };
+  const dateAt=ms=>new Intl.DateTimeFormat('en-CA',{timeZone:studio.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(ms);
+  const addDays=(date,count)=>new Date(Date.parse(`${date}T12:00:00Z`)+count*86400000).toISOString().slice(0,10);
+  const epoch=(date,time)=>Date.parse(`${date}T${time}:00${studio.offset}`);
+  const minutes=time=>Number(time.slice(0,2))*60+Number(time.slice(3));
+  const timeOf=value=>`${String(Math.floor(value/60)).padStart(2,'0')}:${String(value%60).padStart(2,'0')}`;
+  const slotsFor=(selected,date,ignore='')=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))fail(400,'Некорректная дата.');
+    if(date<dateAt(now())||date>addDays(dateAt(now()),rules.horizonDays))return [];
+    const day=new Date(`${date}T12:00:00Z`).getUTCDay();
+    if(!state.schedule.weekdays.includes(day))return [];
+    const result=[];
+    for(let value=minutes(state.schedule.open);value<minutes(state.schedule.close);value+=rules.stepMinutes){
+      const start=epoch(date,timeOf(value)),end=start+selected.duration*60000,occupiedEnd=end+rules.bufferMinutes*60000;
+      const crossesBreak=start<epoch(date,state.schedule.breakEnd)&&occupiedEnd>epoch(date,state.schedule.breakStart);
+      const blocked=state.blocks.some(block=>start<block.end&&occupiedEnd>block.start);
+      if(start>=now()+rules.leadMinutes*60000&&occupiedEnd<=epoch(date,state.schedule.close)&&!crossesBreak&&!blocked&&!overlaps(start,occupiedEnd,ignore))result.push({start,time:timeOf(value)});
+    }
+    return result;
+  };
 
   async function request(path,options={}){
     const method=options.method??'GET';
+    const url=new URL(path,'https://portfolio.invalid/');
+    path=url.pathname.replace(/^\//,'');
+    const query=Object.fromEntries(url.searchParams);
     processNotifications();
     if(path==='bootstrap'&&method==='POST')return {
       mode:'portfolio',user:state.user,studio,rules,
       services:services.filter(item=>item.active),
       works:works.filter(work=>services.some(item=>item.id===work.serviceId&&item.active)),
       schedule:state.schedule,
-      today:new Intl.DateTimeFormat('en-CA',{timeZone:studio.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now()),
+      today:dateAt(now()),
     };
+    if(path==='slots'&&method==='GET'){
+      const existing=query.bookingId?booking(query.bookingId):null;
+      return {slots:slotsFor(existing||service(query.serviceId),query.date,existing?.id)};
+    }
+    if(path==='month'&&method==='GET'){
+      if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(query.month||''))fail(400,'Некорректный месяц.');
+      const existing=query.bookingId?booking(query.bookingId):null,selected=existing||service(query.serviceId),days={};
+      for(let date=`${query.month}-01`;date.startsWith(query.month);date=addDays(date,1))days[date]=slotsFor(selected,date,existing?.id).length;
+      return {days};
+    }
     if(path==='bookings'&&method==='GET')return {bookings:state.bookings.filter(item=>item.userId===state.user.id).sort((a,b)=>a.start-b.start)};
     if(path==='bookings'&&method==='POST'){
       const data=body(options),serialized=JSON.stringify({serviceId:data.serviceId,start:data.start,name:data.name});

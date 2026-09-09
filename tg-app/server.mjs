@@ -30,7 +30,7 @@ export function createApp(options={}) {
   if(mode==='production' && (!token||!ownerId||studio.demoContent||!studio.telegramUsername)) throw Error('Для рабочего запуска нужны BOT_TOKEN, OWNER_TELEGRAM_ID, реальный контакт и demoContent:false в content.mjs');
   const dataRoot=options.dataDir||process.env.DATA_DIR||join(root,'.data');
   const store=createStore(join(dataRoot,mode==='demo'?'demo.sqlite':'production.sqlite'));
-  const staticFiles=new Map([['/','index.html'],['/index.html','index.html'],['/portfolio.html','portfolio.html'],['/styles.css','styles.css'],['/app.mjs','app.mjs'],['/portfolio-store.mjs','portfolio-store.mjs'],['/runtime-api.mjs','runtime-api.mjs'],['/icons.mjs','icons.mjs'],['/content.mjs','content.mjs'],['/assets/icon.svg','assets/icon.svg'],['/assets/nails.png','assets/nails.png']]);
+  const staticFiles=new Map([['/','index.html'],['/index.html','index.html'],['/portfolio.html','portfolio.html'],['/styles.css','styles.css'],['/app.mjs','app.mjs'],['/portfolio-store.mjs','portfolio-store.mjs'],['/portfolio-ui.mjs','portfolio-ui.mjs'],['/runtime-api.mjs','runtime-api.mjs'],['/icons.mjs','icons.mjs'],['/content.mjs','content.mjs'],['/assets/icon.svg','assets/icon.svg'],['/assets/nails.png','assets/nails.png']]);
   const cookies=req=>Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim().split('=')));
   const sessionCookie=req=>cookies(req).beauty_session||'';
   const current=req=>store.session(digest(sessionCookie(req)));

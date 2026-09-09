@@ -96,3 +96,31 @@ test('перенос, отмена и карточка клиента сохра
   assert.deepEqual(client.bookings[0].events.map(event=>event.kind),['created','confirmed','rescheduled','cancelled']);
   assert.equal((await api.request('notifications')).notifications.filter(item=>item.bookingId===created.id).length,4);
 });
+
+test('портфолио позволяет безопасно переключить демонстрационную роль',async()=>{
+  const api=createPortfolioApi({storage:memoryStorage(),now:()=>Date.parse('2026-09-10T00:00:00Z'),randomUUID:()=>crypto.randomUUID()});
+  assert.equal((await api.request('demo-role',{method:'POST',body:JSON.stringify({role:'owner'})})).user.role,'owner');
+  assert.equal((await api.request('bootstrap',{method:'POST',body:'{}'})).user.role,'owner');
+  assert.equal((await api.request('demo-role',{method:'POST',body:JSON.stringify({role:'client'})})).user.role,'client');
+});
+
+test('кабинет мастера получает журнал и управляет блокировками календаря',async()=>{
+  const storage=memoryStorage();
+  const now=()=>Date.parse('2026-09-10T00:00:00Z');
+  let id=200;
+  const api=createPortfolioApi({storage,now,randomUUID:()=>`40000000-0000-4000-8000-${String(++id).padStart(12,'0')}`});
+  const created=(await api.request('bookings',{method:'POST',body:JSON.stringify({
+    key:'admin-booking-001',serviceId:'nude',start:Date.parse('2026-09-11T01:00:00Z'),name:'Мария',
+  })})).booking;
+  await api.request(`confirm/${created.confirmToken}`,{method:'POST',body:'{}'});
+  await api.request('demo-role',{method:'POST',body:JSON.stringify({role:'owner'})});
+
+  const journal=await api.request('admin?date=2026-09-11');
+  assert.equal(journal.bookings.length,1);
+  assert.equal(journal.bookings[0].name,'Мария');
+  const block=await api.request('admin/blocks',{method:'POST',body:JSON.stringify({date:'2026-09-12',from:'16:00',to:'17:00'})});
+  assert.ok(block.id);
+  assert.equal((await api.request('admin?date=2026-09-12')).blocks.length,1);
+  await api.request(`admin/blocks/${block.id}`,{method:'DELETE',body:'{}'});
+  assert.equal((await api.request('admin?date=2026-09-12')).blocks.length,0);
+});

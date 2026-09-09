@@ -83,6 +83,9 @@ export function createPortfolioApi(options={}){
       schedule:state.schedule,
       today:dateAt(now()),
     };
+    if(path==='demo-role'&&method==='POST'){
+      state.user.role=body(options).role==='owner'?'owner':'client';save();return {user:structuredClone(state.user)};
+    }
     if(path==='slots'&&method==='GET'){
       const existing=query.bookingId?booking(query.bookingId):null;
       return {slots:slotsFor(existing||service(query.serviceId),query.date,existing?.id)};
@@ -165,6 +168,36 @@ export function createPortfolioApi(options={}){
       const items=state.bookings.filter(item=>item.userId===clientRoute[1]).sort((a,b)=>b.start-a.start);
       if(!items.length)fail(404,'Клиент не найден.');
       return {client:{id:clientRoute[1],name:items[0].name,bookings:structuredClone(items)}};
+    }
+    if(path==='admin'&&method==='GET'){
+      if(state.user.role!=='owner')fail(403,'Управление доступно только мастеру.');
+      const start=epoch(query.date,'00:00'),end=epoch(addDays(query.date,1),'00:00');
+      return {schedule:structuredClone(state.schedule),bookings:structuredClone(state.bookings.filter(item=>item.start>=start&&item.start<end).sort((a,b)=>a.start-b.start)),blocks:structuredClone(state.blocks.filter(item=>item.start>=start&&item.start<end).sort((a,b)=>a.start-b.start))};
+    }
+    if(path==='admin/schedule'&&method==='POST'){
+      if(state.user.role!=='owner')fail(403,'Управление доступно только мастеру.');
+      const data=body(options),validTime=value=>typeof value==='string'&&/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+      if(!Array.isArray(data.weekdays)||!data.weekdays.length||data.weekdays.some(day=>!Number.isInteger(day)||day<0||day>6))fail(400,'Выберите рабочие дни.');
+      if(![data.open,data.close,data.breakStart,data.breakEnd].every(validTime)||!(data.open<data.close&&data.breakStart>=data.open&&data.breakEnd<=data.close&&data.breakStart<data.breakEnd))fail(400,'Проверьте рабочие часы и перерыв.');
+      state.schedule={weekdays:[...new Set(data.weekdays)],open:data.open,close:data.close,breakStart:data.breakStart,breakEnd:data.breakEnd};save();return {schedule:structuredClone(state.schedule)};
+    }
+    if(path==='admin/blocks'&&method==='POST'){
+      if(state.user.role!=='owner')fail(403,'Управление доступно только мастеру.');
+      const data=body(options),start=epoch(data.date,data.from),end=epoch(data.date,data.to);
+      if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end||start<now()||overlaps(start,end)||state.blocks.some(block=>start<block.end&&end>block.start))fail(409,'Интервал занят или уже прошёл. Записи не изменены.');
+      const item={id:randomUUID(),start,end,label:'Занято мастером'};state.blocks.push(item);save();return {id:item.id};
+    }
+    const blockRoute=path.match(/^admin\/blocks\/([\w-]+)$/);
+    if(blockRoute&&method==='DELETE'){
+      if(state.user.role!=='owner')fail(403,'Управление доступно только мастеру.');
+      state.blocks=state.blocks.filter(item=>item.id!==blockRoute[1]);save();return {ok:true};
+    }
+    const completeRoute=path.match(/^admin\/complete\/([\w-]+)$/);
+    if(completeRoute&&method==='POST'){
+      if(state.user.role!=='owner')fail(403,'Управление доступно только мастеру.');
+      const item=booking(completeRoute[1]);
+      if(item.status!=='confirmed'||item.end>now())fail(409,'Завершить можно только состоявшийся визит.');
+      item.status='completed';addEvent(item,'completed');save();return {booking:structuredClone(item)};
     }
     fail(404,'Раздел не найден.');
   }

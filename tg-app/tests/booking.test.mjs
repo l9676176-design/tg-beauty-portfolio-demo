@@ -48,7 +48,7 @@ test('Полный цикл записи через HTTP, конкурентны
   const saved=await winner('admin/schedule',{...admin.body.schedule,open:'12:00'});assert.equal(saved.status,409,'Нельзя молча вытеснить существующие записи');
   const blocked=await winner('admin/blocks',{date:otherDate,from:'10:00',to:'19:00'});assert.equal(blocked.status,409,'Блокировка не стирает бронь');
   assert.equal((await winner(`admin/complete/${occupied.body.booking.id}`,{})).status,409,'Будущий визит нельзя назвать состоявшимся');
-  for(const path of ['/portfolio.html','/portfolio-store.mjs','/runtime-api.mjs'])assert.equal((await fetch(`${base}${path}`)).status,200,'Публичные файлы автономного демо доступны');
+  for(const path of ['/portfolio.html','/portfolio-store.mjs','/portfolio-ui.mjs','/runtime-api.mjs'])assert.equal((await fetch(`${base}${path}`)).status,200,'Публичные файлы автономного демо доступны');
   for(const path of ['/.data/demo.sqlite','/server.mjs','/database.mjs','/tests/booking.test.mjs'])assert.equal((await fetch(`${base}${path}`)).status,404,'Приватные файлы не раздаются');
   const csrf=await fetch(`${base}/api/bootstrap`,{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://another.example'},body:'{}'});assert.equal(csrf.status,403);
   await new Promise(r=>app.server.close(r));app.store.close();

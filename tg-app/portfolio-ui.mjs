@@ -20,3 +20,7 @@ export function confirmationModel(booking,currentUrl){
 export function notificationStatusLabel(status){
   return status==='scheduled'?'Запланировано':status==='sent'?'Отправлено в демо':status==='cancelled'?'Отменено':'Обновлено';
 }
+
+export function canModifyBooking(booking,{now=Date.now(),changeMinutes=0,admin=false}={}){
+  return ['pending','confirmed'].includes(booking.status)&&(admin||booking.start-now>=changeMinutes*60000);
+}

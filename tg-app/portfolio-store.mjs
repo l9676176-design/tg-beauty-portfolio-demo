@@ -134,7 +134,7 @@ export function createPortfolioApi(options={}){
     if(bookingRoute&&!bookingRoute[2]&&method==='GET')return {booking:structuredClone(booking(bookingRoute[1]))};
     if(bookingRoute&&bookingRoute[2]&&method==='POST'){
       const item=booking(bookingRoute[1]),data=body(options);requireKey(data);
-      if(item.status!=='confirmed')fail(409,'Эта запись уже изменена. Обновите список.');
+      if(!['pending','confirmed'].includes(item.status))fail(409,'Эта запись уже изменена. Обновите список.');
       if(bookingRoute[2]==='reschedule'){
         const start=Number(data.start),end=start+item.duration*60000,occupiedEnd=end+rules.bufferMinutes*60000;
         if(!Number.isFinite(start)||start<now()+rules.leadMinutes*60000||overlaps(start,occupiedEnd,item.id))fail(409,'Новое время уже недоступно. Прежняя запись сохранена.');

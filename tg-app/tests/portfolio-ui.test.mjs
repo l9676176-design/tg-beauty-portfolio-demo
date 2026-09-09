@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {confirmationModel,masterSections,notificationStatusLabel} from '../portfolio-ui.mjs';
+import {canModifyBooking,confirmationModel,masterSections,notificationStatusLabel} from '../portfolio-ui.mjs';
 
 test('ожидающая запись получает персональную ссылку текущей портфолио-страницы',()=>{
   const model=confirmationModel({id:'booking-1',status:'pending',confirmToken:'token-123'},'https://example.test/portfolio.html?old=1');
@@ -13,6 +13,12 @@ test('подтверждённая запись показывает завер�
   const model=confirmationModel({id:'booking-1',status:'confirmed',confirmToken:'token-123'},'https://example.test/portfolio.html');
   assert.equal(model.title,'Запись подтверждена');
   assert.equal(model.url,'');
+});
+
+test('ожидающую подтверждения запись можно перенести или отменить',()=>{
+  const now=Date.parse('2026-09-10T00:00:00Z');
+  const booking={status:'pending',start:now+24*60*60*1000};
+  assert.equal(canModifyBooking(booking,{now,changeMinutes:120}),true);
 });
 
 test('кабинет мастера использует понятные разделы и статусы уведомлений',()=>{

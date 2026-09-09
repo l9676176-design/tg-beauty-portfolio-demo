@@ -97,6 +97,21 @@ test('перенос, отмена и карточка клиента сохра
   assert.equal((await api.request('notifications')).notifications.filter(item=>item.bookingId===created.id).length,4);
 });
 
+test('ожидающую подтверждения запись можно перенести и отменить',async()=>{
+  let id=0;
+  const now=()=>Date.parse('2026-09-10T00:00:00Z');
+  const api=createPortfolioApi({storage:memoryStorage(),now,randomUUID:()=>`30000000-0000-4000-8000-${String(++id).padStart(12,'0')}`});
+  const created=(await api.request('bookings',{method:'POST',body:JSON.stringify({
+    key:'pending-change-key-001',serviceId:'nude',start:Date.parse('2026-09-11T01:00:00Z'),name:'Анна',
+  })})).booking;
+  const moved=(await api.request(`bookings/${created.id}/reschedule`,{method:'POST',body:JSON.stringify({
+    key:'pending-change-key-002',start:Date.parse('2026-09-11T03:00:00Z'),
+  })})).booking;
+  assert.equal(moved.status,'pending');
+  const cancelled=(await api.request(`bookings/${created.id}/cancel`,{method:'POST',body:JSON.stringify({key:'pending-change-key-003'})})).booking;
+  assert.equal(cancelled.status,'cancelled');
+});
+
 test('портфолио позволяет безопасно переключить демонстрационную роль',async()=>{
   const api=createPortfolioApi({storage:memoryStorage(),now:()=>Date.parse('2026-09-10T00:00:00Z'),randomUUID:()=>crypto.randomUUID()});
   assert.equal((await api.request('demo-role',{method:'POST',body:JSON.stringify({role:'owner'})})).user.role,'owner');
